@@ -63,13 +63,20 @@ textarea{width:100%;min-height:120px;resize:vertical;font-family:var(--se);font-
 .brand,.sb{display:none}.nv{flex-direction:column;align-items:center;gap:0;text-align:center;font-size:12px;padding:7px 2px}.nv i{display:none}
 main{padding:26px 18px 100px}h1{font-size:34px}.dg{grid-template-columns:1fr}.hero{flex-direction:column;align-items:flex-start}.top{flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-</style></head><body>
+</style>
+<link rel="stylesheet" href="study.css">
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#405B49"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-192.png">
+</head><body>
 <div class="app"><aside id="nav"></aside><main id="app"></main></div><div id="ov" hidden></div><div id="toast" role="status"></div>
+<script src="study-core.js"></script>
+<script src="study.js"></script>
+<script src="sync-core.js"></script>
+<script src="cloud.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const K={p:"lifeos.prefs",t:"lifeos.tasks",h:"lifeos.habits",n:"lifeos.notes",x:"lifeos.ex",w:"lifeos.ws"};
 const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
-const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast("Storage is blocked in this browser")}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast("Storage is blocked in this browser")}try{CLOUD.touch()}catch(e){}};
 let P=ld(K.p,{name:"",theme:"system",done:false}),T=ld(K.t,[]),H=ld(K.h,[]),N=ld(K.n,{});
 const iso=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
 const today=()=>iso(new Date()),ago=n=>{const d=new Date();d.setDate(d.getDate()-n);return iso(d)};
@@ -78,7 +85,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const val=id=>{const e=$("#"+id);return e?e.value.trim():""};
 function seedEx(){return [["Push-ups","reps"],["Squats","reps"],["Pull-ups","reps"],["Plank","time"],["Toe touches","time"],["Running","dist"]].map(e=>({id:uid(),name:e[0],kind:e[1],wt:false,arch:false}))}
 let X=ld(K.x,null),W=ld(K.w,[]);if(!X){X=seedEx();sv(K.x,X)}
-let view="day",f="today",q="",fx=null,tt,OBH="";
+let view="day",f="today",q="",fx=null,tt,OBH="",OBS="";
 function toast(m){const e=$("#toast");e.textContent=m;e.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>e.classList.remove("show"),2200)}
 function applyTheme(){const r=document.documentElement;P.theme==="system"?r.removeAttribute("data-theme"):r.setAttribute("data-theme",P.theme)}
 const PR={urgent:[0,"Urgent","--tc"],high:[1,"High","--yl"],medium:[2,"Medium","--lv"],low:[3,"Low","--sg"]};
@@ -88,14 +95,14 @@ const chip=p=>`<span class="chip" style="--c:var(${PR[p][2]})">${PR[p][1]}</span
 const cmp=(a,b)=>a.done-b.done||PR[a.pr][0]-PR[b.pr][0]||(a.due||"9").localeCompare(b.due||"9")||(a.time||"99").localeCompare(b.time||"99");
 const tScope=()=>T.filter(t=>t.due===today()||t.doneAt===today()||(t.due&&t.due<today()&&!t.done));
 const live=()=>H.filter(h=>!h.arch);
-const act=d=>H.filter(h=>h.log[d]).length+T.filter(t=>t.doneAt===d).length;
+const act=d=>H.filter(h=>h.log[d]).length+T.filter(t=>t.doneAt===d).length+SS.activity(d);
 function gstreak(){let i=act(today())?0:1,n=0;while(i<3650&&act(ago(i))){n++;i++}return n}
 function streak(h){let i=h.log[today()]?0:1,n=0;while(i<3650&&h.log[ago(i)]){n++;i++}return n}
 function best(h){let b=0,c=0,p=null;Object.keys(h.log).sort().forEach(k=>{c=p&&(new Date(k)-new Date(p))/864e5===1?c+1:1;b=Math.max(b,c);p=k});return b}
 function rate(h){const s=Math.min(30,Math.floor((new Date(today())-new Date(h.created))/864e5)+1);let c=0;for(let i=0;i<s;i++)if(h.log[ago(i)])c++;return Math.round(c/s*100)}
 function prog(){const ts=tScope(),hs=live(),td=ts.filter(t=>t.done).length,hd=hs.filter(h=>h.log[today()]).length,tot=ts.length+hs.length;return{ts,td,hs,hd,tot,p:tot?(td+hd)/tot:0}}
 function fmtDue(t){const d=t.due?(t.due===today()?"Today":t.due===ago(-1)?"Tomorrow":new Date(t.due+"T00:00").toLocaleDateString(undefined,{day:"numeric",month:"short"})):"No date";return d+(t.time?" at "+t.time:"")}
-const row=t=>`<div class="tr ${t.done?"dn":""}"><button class="cb ${t.done?"on":""}" role="checkbox" aria-checked="${!!t.done}" aria-label="Complete: ${esc(t.t)}" data-a="tt" data-i="${t.id}"></button><div class="g"><div class="tt">${esc(t.t)}</div><div class="mo mu ${!t.done&&t.due&&t.due<today()?"od":""}" style="font-size:12px">${fmtDue(t)}</div></div>${chip(t.pr)}<button class="lk" aria-label="Delete task" data-a="dt" data-i="${t.id}">Delete</button></div>`;
+const row=t=>`<div class="tr ${t.done?"dn":""}"><button class="cb ${t.done?"on":""}" role="checkbox" aria-checked="${!!t.done}" aria-label="Complete: ${esc(t.t)}" data-a="tt" data-i="${t.id}"></button><div class="g"><div class="tt">${esc(t.t)}</div><div class="mo mu ${!t.done&&t.due&&t.due<today()?"od":""}" style="font-size:12px">${fmtDue(t)}</div></div>${SS.taskChips(t)}${chip(t.pr)}<button class="lk" aria-label="Delete task" data-a="dt" data-i="${t.id}">Delete</button></div>`;
 const opts=a=>a.map(o=>`<option>${o}</option>`).join("");
 const prOpts=sel=>Object.keys(PR).map(k=>`<option value="${k}" ${k===sel?"selected":""}>${PR[k][1]}</option>`).join("");
 function hcheck(h){return `<div class="tr"><button class="cb ${h.log[today()]?"on":""}" role="checkbox" aria-checked="${!!h.log[today()]}" aria-label="Log ${esc(h.name)}" data-a="hc" data-i="${h.id}" data-d="${today()}"></button><div class="g">${esc(h.name)}</div><span class="mo mu" style="font-size:12px">${streak(h)} day streak</span></div>`}
@@ -107,8 +114,8 @@ ${(T.length+H.length)&&(!P.lastBackup||(new Date(today())-new Date(P.lastBackup)
 <div class="dg"><div class="col">
 <div class="card hero"><div class="ring"><svg width="150" height="150" viewBox="0 0 150 150"><circle class="t" cx="75" cy="75" r="64"/><circle class="f" cx="75" cy="75" r="64" style="stroke-dashoffset:${L}"/></svg><b>${pc}%</b></div><div class="st"><div><span>Tasks</span><b>${g.td}/${g.ts.length}</b></div><div><span>Habits</span><b>${g.hd}/${g.hs.length}</b></div><div><span>Streak</span><b>${gstreak()} days</b></div><div><span>Productivity score</span><b>${pc}</b></div></div></div>
 <section><h3>Today’s priorities</h3><div class="add"><input type="text" id="q1" data-e="atd" placeholder="Add a priority for today" aria-label="New task"><select id="p1" aria-label="Priority">${prOpts("medium")}</select><button class="btn" data-a="atd">Add</button></div>${list.map(row).join("")||'<div class="emp"><b>A clear day.</b>Add the one thing that matters most today.</div>'}</section>
-</div><div class="col">
-<section><h3>Habit snapshot</h3>${live().slice(0,6).map(hcheck).join("")||'<div class="emp"><b>No habits yet.</b><button class="btn" data-a="v" data-i="habits" style="margin-top:10px">Create a habit</button></div>'}</section>
+${SS.dayLeft()}</div><div class="col">
+${SS.dayRight()}<section><h3>Habit snapshot</h3>${live().slice(0,6).map(hcheck).join("")||'<div class="emp"><b>No habits yet.</b><button class="btn" data-a="v" data-i="habits" style="margin-top:10px">Create a habit</button></div>'}</section>
 <section><h3>Last 7 days</h3><div class="wk">${wk.map(x=>`<div class="bc" title="${x.d}: ${x.h} habits, ${x.t} tasks"><b>${x.h+x.t}</b><div class="bs"><span style="--h:${x.t/mx*100}%;background:var(--tc)"></span><span style="--h:${x.h/mx*100}%;background:var(--sg)"></span></div><em>${new Date(x.d+"T00:00").toLocaleDateString(undefined,{weekday:"short"})}</em></div>`).join("")}</div><p class="mu" style="font-size:12.5px;margin:10px 0 0">Habits logged (green) and tasks completed (terracotta).</p></section>
 <section><h3>Personal notes <span id="sv" class="mo" style="text-transform:none;letter-spacing:0"></span></h3><textarea id="note" aria-label="Today’s note" placeholder="What’s on your mind today?">${esc(N[today()]||"")}</textarea></section>
 </div></div>`}
@@ -123,13 +130,13 @@ function vSettings(){return `<div class="top"><div><h1>Settings</h1><p class="q"
 <div class="row"><label for="nm">Your name</label><input id="nm" value="${esc(P.name)}" placeholder="Your name"></div>
 <div class="row"><span>Theme</span><div class="seg">${["light","dark","system"].map(t=>`<button class="${P.theme===t?"on":""}" data-a="st" data-i="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}</div></div>
 <div class="row"><span>Backup<br><span class="mu" style="font-size:13px">${T.length} tasks, ${H.length} habits, ${W.filter(w=>w.status==="done").length} workouts, ${Object.keys(N).length} notes. Last backup: ${P.lastBackup||"never"}</span></span><span><button class="btn s" data-a="exp">Export JSON</button> <button class="btn s" data-a="x_csv">Workouts CSV</button> <button class="btn s" data-a="imp">Import</button><input type="file" id="fi" accept="application/json" hidden></span></div>
-<div class="row"><span>Delete all data</span><button class="btn s" data-a="rst">Erase everything</button></div>`}
-function render(){const V={day:vDay,tasks:vTasks,habits:vHabits,move:vMove,settings:vSettings};
-$("#nav").innerHTML=`<div class="brand">Life<em>OS</em></div>`+[["day","My Day"],["tasks","My Tasks"],["habits","Habits"],["move","Exercise"],["settings","Settings"]].map((n,i)=>`<button class="nv ${view===n[0]?"on":""}" data-a="v" data-i="${n[0]}"><i>0${i+1}</i>${n[1]}</button>`).join("")+`<div class="sb"><b>${gstreak()}</b><span>day streak</span></div>`;
-$("#app").innerHTML=V[view]();if(fx){const e=$("#"+fx);e&&e.focus();fx=null}
-$("#ov").hidden=P.done;if(!P.done)$("#ov").innerHTML=`<div class="card" role="dialog" aria-modal="true" aria-label="Welcome"><h1 style="font-size:34px">Welcome to Life<em>OS</em></h1><p class="mu">Set up in under a minute, or skip and do it later.</p><p><label>Your name<br><input id="obn" value="${esc(P.name)}" style="width:100%"></label></p><p>Theme<br><span class="seg">${["light","dark","system"].map(t=>`<button class="${P.theme===t?"on":""}" data-a="st" data-i="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}</span></p><p><label>Daily habits (comma separated)<br><input id="obh" value="${esc(OBH)}" placeholder="DSA, Aptitude, Meditation" style="width:100%"></label></p><div class="add"><button class="btn" data-a="ob">Get started</button><button class="btn s" data-a="sk">Skip for now</button></div></div>`}
+${CLOUD.settingsHTML()}${SS.settingsRow()}<div class="row"><span>Delete all data</span><button class="btn s" data-a="rst">Erase everything</button></div>`}
+function render(){const V=Object.assign({day:vDay,tasks:vTasks,habits:vHabits,move:vMove,settings:vSettings},SS.views);
+$("#nav").innerHTML=`<div class="brand">Life<em>OS</em></div>`+SS.navHTML(view)+`<div class="sb"><b>${gstreak()}</b><span>day streak</span>${CLOUD.badge()}</div>`;
+$("#app").innerHTML=V[view]();SS.after();if(fx){const e=$("#"+fx);e&&e.focus();fx=null}
+$("#ov").hidden=P.done;if(!P.done)$("#ov").innerHTML=`<div class="card" role="dialog" aria-modal="true" aria-label="Welcome"><h1 style="font-size:34px">Welcome to Life<em>OS</em></h1><p class="mu">Set up in under a minute, or skip and do it later.</p><p><label>Your name<br><input id="obn" value="${esc(P.name)}" style="width:100%"></label></p><p>Theme<br><span class="seg">${["light","dark","system"].map(t=>`<button class="${P.theme===t?"on":""}" data-a="st" data-i="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}</span></p><p><label>Subjects you are studying (optional)<br><input id="obs" value="${esc(OBS)}" placeholder="Maths, Physics, Data Structures" style="width:100%"></label></p><p><label>Daily habits (comma separated)<br><input id="obh" value="${esc(OBH)}" placeholder="DSA, Aptitude, Meditation" style="width:100%"></label></p><div class="add"><button class="btn" data-a="ob">Get started</button><button class="btn s" data-a="sk">Skip for now</button></div></div>`}
 function addTask(a,b,c,d,dflt){const t=val(a);if(!t)return;T.push({id:uid(),t,pr:val(b),due:c?val(c):dflt,time:d?val(d):"",done:false,doneAt:""});sv(K.t,T);fx=a;render();toast("Task added")}
-function go(a,i,b){if(!P.done){const n=$("#obn"),o=$("#obh");if(n)P.name=n.value.trim();if(o)OBH=o.value}if(a.slice(0,2)==="x_")return xgo(a,i,b);const h=H.find(x=>x.id===i),t=T.find(x=>x.id===i);
+function go(a,i,b){if(!P.done){const n=$("#obn"),o=$("#obh"),u=$("#obs");if(n)P.name=n.value.trim();if(o)OBH=o.value;if(u)OBS=u.value}if(a.slice(0,2)==="x_")return xgo(a,i,b);const h=H.find(x=>x.id===i),t=T.find(x=>x.id===i);
 if(a==="v"){view=i}
 else if(a==="th"){P.theme={system:"light",light:"dark",dark:"system"}[P.theme];applyTheme();sv(K.p,P)}
 else if(a==="st"){P.theme=i;applyTheme();sv(K.p,P)}
@@ -142,18 +149,18 @@ else if(a==="ah"){const n=val("hn");if(!n)return;H.push({id:uid(),name:n,cat:val
 else if(a==="hc"){const d=b;if(h.log[d])delete h.log[d];else{h.log[d]=1;if(d===today())toast(streak(h)+" day streak: "+h.name)}sv(K.h,H)}
 else if(a==="ha"){h.arch=true;sv(K.h,H)}else if(a==="hr"){h.arch=false;sv(K.h,H)}
 else if(a==="hd"){if(confirm("Delete this habit and all its history?")){H=H.filter(x=>x.id!==i);sv(K.h,H)}}
-else if(a==="ob"){P.name=val("obn");val("obh").split(",").map(s=>s.trim()).filter(Boolean).forEach(n=>H.push({id:uid(),name:n,cat:"Other",created:today(),log:{},arch:false}));P.done=true;sv(K.p,P);sv(K.h,H)}
+else if(a==="ob"){P.name=val("obn");val("obh").split(",").map(s=>s.trim()).filter(Boolean).forEach(n=>H.push({id:uid(),name:n,cat:"Other",created:today(),log:{},arch:false}));SS.seed(val("obs"));P.done=true;sv(K.p,P);sv(K.h,H)}
 else if(a==="sk"){P.done=true;sv(K.p,P)}
-else if(a==="exp"){const l=document.createElement("a");l.href=URL.createObjectURL(new Blob([JSON.stringify({prefs:P,tasks:T,habits:H,notes:N,exercises:X,workouts:W},null,2)],{type:"application/json"}));l.download="lifeos-backup-"+today()+".json";l.click();P.lastBackup=today();sv(K.p,P);toast("Backup downloaded");render();return}
+else if(a==="exp"){const l=document.createElement("a");l.href=URL.createObjectURL(new Blob([JSON.stringify({prefs:P,tasks:T,habits:H,notes:N,exercises:X,workouts:W,study:SS.exportData()},null,2)],{type:"application/json"}));l.download="lifeos-backup-"+today()+".json";l.click();P.lastBackup=today();sv(K.p,P);toast("Backup downloaded");render();return}
 else if(a==="imp"){$("#fi").click();return}
-else if(a==="rst"){if(confirm("Erase all tasks, habits and notes?")){T=[];H=[];N={};X=seedEx();W=[];sv(K.x,X);sv(K.w,W);[K.t,K.h,K.n].forEach(k=>sv(k,k===K.n?{}:[]));toast("All data erased")}}
+else if(a==="rst"){if(confirm("Erase all tasks, habits, notes and study data?")&&CLOUD.okErase()){T=[];H=[];N={};X=seedEx();W=[];sv(K.x,X);sv(K.w,W);SS.reset();[K.t,K.h,K.n].forEach(k=>sv(k,k===K.n?{}:[]));toast("All data erased")}}
 render()}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(b)go(b.dataset.a,b.dataset.i,b.dataset.d)});
 document.addEventListener("keydown",e=>{const t=e.target;if(e.key==="Enter"&&t.dataset&&t.dataset.e)return go(t.dataset.e);
 if(e.key.toLowerCase()==="n"&&!e.metaKey&&!e.ctrlKey&&!/INPUT|TEXTAREA|SELECT/.test(t.tagName)){e.preventDefault();view="tasks";fx="tn";render()}});
 document.addEventListener("input",e=>{const t=e.target;if(t.id==="note"){N[today()]=t.value;sv(K.n,N);const s=$("#sv");if(s)s.textContent="saved"}if(t.id==="sq"){q=t.value;$("#tl").innerHTML=listHTML()}});
 document.addEventListener("change",e=>{const t=e.target;if(t.id==="nm"){P.name=t.value.trim();sv(K.p,P);render();toast("Name saved")}
-if(t.id==="fi"&&t.files[0]){const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.tasks)||!Array.isArray(d.habits))throw 0;P=Object.assign(P,d.prefs||{},{done:true});T=d.tasks;H=d.habits;N=d.notes||{};if(Array.isArray(d.exercises))X=d.exercises;if(Array.isArray(d.workouts))W=d.workouts;sv(K.x,X);sv(K.w,W);sv(K.p,P);sv(K.t,T);sv(K.h,H);sv(K.n,N);applyTheme();render();toast("Backup restored")}catch(x){toast("That file is not a valid backup")}};r.readAsText(t.files[0])}});
+if(t.id==="fi"&&t.files[0]){const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.tasks)||!Array.isArray(d.habits))throw 0;P=Object.assign(P,d.prefs||{},{done:true});T=d.tasks;H=d.habits;N=d.notes||{};if(Array.isArray(d.exercises))X=d.exercises;if(Array.isArray(d.workouts))W=d.workouts;if(d.study)SS.importData(d.study);sv(K.x,X);sv(K.w,W);sv(K.p,P);sv(K.t,T);sv(K.h,H);sv(K.n,N);applyTheme();render();toast("Backup restored")}catch(x){toast("That file is not a valid backup")}};r.readAsText(t.files[0])}});
 /* ===== Exercise module ===== */
 const exOf=id=>X.find(e=>e.id===id)||{name:"Removed exercise",kind:"reps",wt:false};
 const live_ws=()=>W.find(s=>s.status==="active");
@@ -242,5 +249,6 @@ setInterval(()=>{const s=live_ws();if(!s||view!=="move")return;const el=$("#el")
 if(live_ws()&&live_ws().timer)setTimeout(()=>toast("A timer was running when the page closed. Check that duration."),600);
 
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
-applyTheme();render();
+applyTheme();render();CLOUD.init();
+if("serviceWorker"in navigator&&location.protocol.startsWith("http"))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script></body></html>

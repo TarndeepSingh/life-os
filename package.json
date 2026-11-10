@@ -1,0 +1,9 @@
+{
+  "name": "lifeos",
+  "version": "3.0.0",
+  "private": true,
+  "description": "LifeOS: daily goals, tasks, habits, exercise, focus and study.",
+  "scripts": { "test": "node --test" },
+  "dependencies": { "web-push": "3.6.7" },
+  "engines": { "node": ">=20" }
+}
